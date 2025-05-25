@@ -692,7 +692,7 @@ async function getHomePage() {
                                 <div class="history-section">
                                     <div class="history-label">Recent History (last 100 checks):</div>
                                     <div class="history-dots">
-                                        \${website.history.map(check => 
+                                        \${website.history.slice().reverse().map(check => 
                                             \`<span class="history-dot \${check.status}" title="\${check.status} - \${formatTime(check.timestamp)} - \${check.responseTime}ms"></span>\`
                                         ).join('')}
                                     </div>
