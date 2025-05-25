@@ -1,0 +1,27 @@
+name = "uptime-checker"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["global_fetch_strictly_public"]
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "UPTIME_KV"
+id = "cbc2e0f72d27404c89e89fe1e416bb1c"
+preview_id = "2c8875b5a0ef442095ac16b5a21b9b48"
+
+# Cron triggers
+[triggers]
+crons = ["*/5 * * * *"] # Run every 5 minutes
+
+# Enable logging
+[observability]
+enabled = true
+
+# Environment variables
+[vars]
+ENVIRONMENT = "production"
+
+# For development
+[env.development]
+[env.development.vars]
+ENVIRONMENT = "development"
