@@ -42,7 +42,8 @@ async function handleRequest(request, env) {
         } else if (request.method === 'POST') {
           return handleAddWebsite(request, env, corsHeaders);
         }
-        break;      case '/api/check':
+        break;
+      case '/api/check':
         if (request.method === 'POST') {
           return handleManualCheck(request, env, corsHeaders);
         }
@@ -68,16 +69,16 @@ async function handleRequest(request, env) {
     }
   } catch (error) {
     console.error('Error handling request:', error);
-    return new Response('Internal Server Error', { 
-      status: 500, 
-      headers: corsHeaders 
+    return new Response('Internal Server Error', {
+      status: 500,
+      headers: corsHeaders,
     });
   }
 }
 
 async function performUptimeChecks(env) {
   console.log('Starting scheduled uptime checks...');
-  
+
   try {
     // Get list of websites to check
     const websitesData = await env.UPTIME_KV.get('websites');
@@ -88,7 +89,7 @@ async function performUptimeChecks(env) {
 
     const websites = JSON.parse(websitesData);
     const checkPromises = websites.map(website => checkWebsite(website, env));
-    
+
     await Promise.all(checkPromises);
     console.log('Completed uptime checks for', websites.length, 'websites');
   } catch (error) {
@@ -114,7 +115,7 @@ async function checkWebsite(website, env) {
 
     responseTime = Date.now() - startTime;
     statusCode = response.status;
-    
+
     if (response.ok) {
       status = 'up';
     } else {
@@ -146,12 +147,12 @@ async function checkWebsite(website, env) {
   const historyKey = `history:${website.id}`;
   const existingHistory = await env.UPTIME_KV.get(historyKey);
   let history = existingHistory ? JSON.parse(existingHistory) : [];
-  
+
   history.unshift(result);
   if (history.length > 100) {
     history = history.slice(0, 100);
   }
-  
+
   await env.UPTIME_KV.put(historyKey, JSON.stringify(history));
 
   console.log(`Checked ${website.url}: ${status} (${responseTime}ms)`);
@@ -167,10 +168,10 @@ async function handleGetStatus(env, corsHeaders) {
     }
 
     const websites = JSON.parse(websitesData);
-    const statusPromises = websites.map(async (website) => {
+    const statusPromises = websites.map(async website => {
       const statusData = await env.UPTIME_KV.get(`status:${website.id}`);
       const historyData = await env.UPTIME_KV.get(`history:${website.id}`);
-      
+
       return {
         ...website,
         currentStatus: statusData ? JSON.parse(statusData) : null,
@@ -179,15 +180,15 @@ async function handleGetStatus(env, corsHeaders) {
     });
 
     const results = await Promise.all(statusPromises);
-    
+
     return new Response(JSON.stringify(results), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (error) {
     console.error('Error getting status:', error);
-    return new Response('Error getting status', { 
-      status: 500, 
-      headers: corsHeaders 
+    return new Response('Error getting status', {
+      status: 500,
+      headers: corsHeaders,
     });
   }
 }
@@ -196,15 +197,15 @@ async function handleGetWebsites(env, corsHeaders) {
   try {
     const websitesData = await env.UPTIME_KV.get('websites');
     const websites = websitesData ? JSON.parse(websitesData) : [];
-    
+
     return new Response(JSON.stringify(websites), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (error) {
     console.error('Error getting websites:', error);
-    return new Response('Error getting websites', { 
-      status: 500, 
-      headers: corsHeaders 
+    return new Response('Error getting websites', {
+      status: 500,
+      headers: corsHeaders,
     });
   }
 }
@@ -213,18 +214,18 @@ async function handleAddWebsite(request, env, corsHeaders) {
   try {
     // Check authentication
     if (!isAuthenticated(request)) {
-      return new Response('Unauthorized', { 
-        status: 401, 
-        headers: corsHeaders 
+      return new Response('Unauthorized', {
+        status: 401,
+        headers: corsHeaders,
       });
     }
 
     const { name, url } = await request.json();
-    
+
     if (!name || !url) {
-      return new Response('Name and URL are required', { 
-        status: 400, 
-        headers: corsHeaders 
+      return new Response('Name and URL are required', {
+        status: 400,
+        headers: corsHeaders,
       });
     }
 
@@ -232,33 +233,33 @@ async function handleAddWebsite(request, env, corsHeaders) {
     try {
       new URL(url);
     } catch {
-      return new Response('Invalid URL format', { 
-        status: 400, 
-        headers: corsHeaders 
+      return new Response('Invalid URL format', {
+        status: 400,
+        headers: corsHeaders,
       });
     }
 
     const websitesData = await env.UPTIME_KV.get('websites');
     const websites = websitesData ? JSON.parse(websitesData) : [];
-    
+
     const newWebsite = {
       id: generateId(),
       name,
       url,
       createdAt: new Date().toISOString(),
     };
-    
+
     websites.push(newWebsite);
     await env.UPTIME_KV.put('websites', JSON.stringify(websites));
-    
+
     return new Response(JSON.stringify(newWebsite), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (error) {
     console.error('Error adding website:', error);
-    return new Response('Error adding website', { 
-      status: 500, 
-      headers: corsHeaders 
+    return new Response('Error adding website', {
+      status: 500,
+      headers: corsHeaders,
     });
   }
 }
@@ -266,35 +267,35 @@ async function handleAddWebsite(request, env, corsHeaders) {
 async function handleManualCheck(request, env, corsHeaders) {
   try {
     const { websiteId } = await request.json();
-    
+
     const websitesData = await env.UPTIME_KV.get('websites');
     if (!websitesData) {
-      return new Response('No websites found', { 
-        status: 404, 
-        headers: corsHeaders 
+      return new Response('No websites found', {
+        status: 404,
+        headers: corsHeaders,
       });
     }
 
     const websites = JSON.parse(websitesData);
     const website = websites.find(w => w.id === websiteId);
-    
+
     if (!website) {
-      return new Response('Website not found', { 
-        status: 404, 
-        headers: corsHeaders 
+      return new Response('Website not found', {
+        status: 404,
+        headers: corsHeaders,
       });
     }
 
     await checkWebsite(website, env);
-    
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   } catch (error) {
     console.error('Error performing manual check:', error);
-    return new Response('Error performing check', { 
-      status: 500, 
-      headers: corsHeaders 
+    return new Response('Error performing check', {
+      status: 500,
+      headers: corsHeaders,
     });
   }
 }
@@ -311,16 +312,16 @@ function generateSessionToken() {
 function isAuthenticated(request) {
   const cookies = parseCookies(request.headers.get('Cookie') || '');
   const sessionToken = cookies.session;
-  
+
   // In a real app, you'd validate this token against a database
   // For this simple implementation, we'll just check if it exists and is recent
   if (!sessionToken) return false;
-  
+
   try {
     const timestamp = parseInt(sessionToken.split('').slice(-8).join(''), 36);
     const now = Date.now();
     // Session expires after 24 hours
-    return (now - timestamp) < 24 * 60 * 60 * 1000;
+    return now - timestamp < 24 * 60 * 60 * 1000;
   } catch {
     return false;
   }
@@ -340,23 +341,26 @@ function parseCookies(cookieString) {
 async function handleLogin(request, env, corsHeaders) {
   try {
     const { password } = await request.json();
-    
-    // Get admin password from environment variable
-    const adminPassword = env.ADMIN_PASSWORD
 
-	if (!adminPassword) {
-		throw new Error('Admin password not set');
-	}
-    
-    if (password !== adminPassword) {
-      return new Response(JSON.stringify({ success: false, message: 'Invalid password' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+    // Get admin password from environment variable
+    const adminPassword = env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+      throw new Error('Admin password not set');
     }
-    
+
+    if (password !== adminPassword) {
+      return new Response(
+        JSON.stringify({ success: false, message: 'Invalid password' }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
     const sessionToken = generateSessionToken();
-    
+
     return new Response(JSON.stringify({ success: true }), {
       headers: {
         'Content-Type': 'application/json',
@@ -366,10 +370,13 @@ async function handleLogin(request, env, corsHeaders) {
     });
   } catch (error) {
     console.error('Error during login:', error);
-    return new Response(JSON.stringify({ success: false, message: 'Login failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
-    });
+    return new Response(
+      JSON.stringify({ success: false, message: 'Login failed' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      }
+    );
   }
 }
 
@@ -377,7 +384,8 @@ function handleLogout(corsHeaders) {
   return new Response(JSON.stringify({ success: true }), {
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/',
+      'Set-Cookie':
+        'session=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/',
       ...corsHeaders,
     },
   });
@@ -385,7 +393,7 @@ function handleLogout(corsHeaders) {
 
 function handleAuthStatus(request, corsHeaders) {
   const authenticated = isAuthenticated(request);
-  
+
   return new Response(JSON.stringify({ authenticated }), {
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
   });

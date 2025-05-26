@@ -1,0 +1,7 @@
+node_modules/
+.wrangler/
+.git/
+*.min.js
+*.min.css
+package-lock.json
+.dev.vars

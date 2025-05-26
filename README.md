@@ -25,17 +25,20 @@ A serverless website uptime monitoring application built with Cloudflare Workers
 ### Setup
 
 1. **Clone and install dependencies:**
+
    ```bash
    cd uppy
    npm install
    ```
 
 2. **Login to Cloudflare:**
+
    ```bash
    npx wrangler login
    ```
 
 3. **Create KV namespaces:**
+
    ```bash
    npm run kv:create
    npm run kv:create-preview
@@ -45,9 +48,11 @@ A serverless website uptime monitoring application built with Cloudflare Workers
    Replace the `id` and `preview_id` values in `wrangler.toml` with the IDs returned from the previous step.
 
 5. **Set up authentication:**
+
    ```bash
    npm run setup-auth
    ```
+
    This will help you configure a secure admin password for website management.
 
 6. **Deploy to Cloudflare Workers:**
@@ -58,6 +63,7 @@ A serverless website uptime monitoring application built with Cloudflare Workers
 ### Development
 
 Run the worker locally:
+
 ```bash
 npm run dev
 ```
@@ -74,6 +80,7 @@ The application has two access levels:
 2. **Admin Access**: Password-protected access to add/manage websites
 
 To access admin features:
+
 1. Click the login area on the dashboard
 2. Enter your admin password (set during setup)
 3. You can now add websites and access management features
@@ -90,12 +97,15 @@ To access admin features:
 ### API Endpoints
 
 #### Get Status
+
 ```http
 GET /api/status
 ```
+
 Returns the current status and history for all monitored websites.
 
 #### Add Website (Admin Only)
+
 ```http
 POST /api/websites
 Content-Type: application/json
@@ -108,6 +118,7 @@ Cookie: session=your-session-token
 ```
 
 #### Login
+
 ```http
 POST /api/login
 Content-Type: application/json
@@ -118,16 +129,19 @@ Content-Type: application/json
 ```
 
 #### Logout
+
 ```http
 POST /api/logout
 ```
 
 #### Check Auth Status
+
 ```http
 GET /api/auth-status
 ```
 
 #### Manual Check
+
 ```http
 POST /api/check
 Content-Type: application/json
@@ -142,7 +156,9 @@ Content-Type: application/json
 ### Authentication
 
 #### Development Setup
+
 Create a `.dev.vars` file in your project root (automatically handled by setup script):
+
 ```bash
 ADMIN_PASSWORD=your-password-here
 ```
@@ -150,12 +166,15 @@ ADMIN_PASSWORD=your-password-here
 > **Note**: The `.dev.vars` file is automatically added to `.gitignore` to keep your password secure.
 
 #### Production Setup (Recommended)
+
 Use Cloudflare secrets for better security:
+
 ```bash
 wrangler secret put ADMIN_PASSWORD
 ```
 
 #### Security Features
+
 - **Session-based authentication**: Uses secure HTTP-only cookies
 - **Session expiration**: Sessions expire after 24 hours
 - **Public dashboard**: Monitoring data remains publicly viewable
@@ -199,6 +218,7 @@ crons = ["*/5 * * * *"]  # Every 5 minutes
 ## Data Structure
 
 ### Website Object
+
 ```json
 {
   "id": "abc123",
@@ -209,6 +229,7 @@ crons = ["*/5 * * * *"]  # Every 5 minutes
 ```
 
 ### Status Object
+
 ```json
 {
   "url": "https://example.com",
@@ -233,11 +254,13 @@ The application provides several metrics:
 ## Deployment Options
 
 ### Production Deployment
+
 ```bash
 npm run deploy
 ```
 
 ### Custom Domain
+
 Add a custom domain in the Cloudflare Workers dashboard or via wrangler:
 
 ```bash
@@ -249,16 +272,19 @@ npx wrangler deploy --name uptime-checker --route "monitor.yourdomain.com/*"
 ### Authentication Issues
 
 **"Invalid password" error:**
+
 - Check that `ADMIN_PASSWORD` is set correctly in wrangler.toml or as a secret
-- For development: Verify the password in `[vars]` section  
+- For development: Verify the password in `[vars]` section
 - For production: Use `wrangler secret list` to verify the secret exists
 
 **Session expired errors:**
+
 - Sessions expire after 24 hours for security
 - Simply log in again to get a new session
 - Check browser cookies if issues persist
 
 **Login form not appearing:**
+
 - Ensure you're accessing the correct URL
 - Check browser console for JavaScript errors
 - Try refreshing the page
@@ -266,11 +292,13 @@ npx wrangler deploy --name uptime-checker --route "monitor.yourdomain.com/*"
 ### Monitoring Issues
 
 **Websites not being checked:**
+
 - Verify cron triggers are enabled in your Cloudflare dashboard
 - Check worker logs for errors during scheduled executions
 - Ensure the worker has KV namespace access
 
 **Manual checks failing:**
+
 - Check if the website URL is accessible
 - Verify the URL format (must include http:// or https://)
 - Review worker logs for timeout or connection errors
@@ -286,6 +314,7 @@ npx wrangler deploy --name uptime-checker --route "monitor.yourdomain.com/*"
 ### Debugging
 
 Check the worker logs:
+
 ```bash
 npx wrangler tail
 ```
@@ -305,6 +334,7 @@ MIT License - feel free to use this project for personal or commercial use.
 ## Support
 
 For issues and questions:
+
 - Check the Cloudflare Workers documentation
 - Review the worker logs with `npx wrangler tail`
 - Ensure KV namespaces are properly configured
