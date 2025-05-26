@@ -688,7 +688,15 @@ async function getHomePage() {
             <h1>🚀 Uptime Checker</h1>
             <p>Monitor your websites with Cloudflare Workers</p>
         </div>
-          <div class="card" id="loginCard" style="display: none;">
+        
+        <div class="card">
+            <h2 style="margin-bottom: 20px;">Monitored Websites</h2>
+            <div id="websiteList" class="loading">
+                Loading websites...
+            </div>
+        </div>
+        
+        <div class="card" id="loginCard" style="display: none;">
             <h2>Admin Login</h2>
             <form class="add-website-form" id="loginForm">
                 <div class="form-group">
@@ -714,11 +722,6 @@ async function getHomePage() {
                     <input type="url" id="websiteUrl" placeholder="https://example.com" required>
                 </div>                <button type="submit" class="btn" id="addBtn">Add Website</button>
             </form>
-        </div><div class="card">
-            <h2 style="margin-bottom: 20px;">Monitored Websites</h2>
-            <div id="websiteList" class="loading">
-                Loading websites...
-            </div>
         </div>
     </div>    <script>
         let websites = [];
@@ -884,12 +887,12 @@ async function getHomePage() {
                 return \`
                     <div class="website-item \${status ? status.status : 'unknown'}">
                         <div class="website-header">
+                            <div class="status-badge \${status ? status.status : 'unknown'}">
+                                \${status ? status.status : 'Unknown'}
+                            </div>
                             <div class="website-info">
                                 <h3>\${website.name}</h3>
                                 <div class="url">\${website.url}</div>
-                            </div>
-                            <div class="status-badge \${status ? status.status : 'unknown'}">
-                                \${status ? status.status : 'Unknown'}
                             </div>
                         </div>
                           \${status ? \`
