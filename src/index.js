@@ -42,13 +42,26 @@ async function handleRequest(request, env) {
         } else if (request.method === 'POST') {
           return handleAddWebsite(request, env, corsHeaders);
         }
-        break;
-
-      case '/api/check':
+        break;      case '/api/check':
         if (request.method === 'POST') {
           return handleManualCheck(request, env, corsHeaders);
         }
         break;
+
+      case '/api/login':
+        if (request.method === 'POST') {
+          return handleLogin(request, env, corsHeaders);
+        }
+        break;
+
+      case '/api/logout':
+        if (request.method === 'POST') {
+          return handleLogout(corsHeaders);
+        }
+        break;
+
+      case '/api/auth-status':
+        return handleAuthStatus(request, corsHeaders);
 
       default:
         return new Response('Not Found', { status: 404, headers: corsHeaders });
@@ -198,6 +211,14 @@ async function handleGetWebsites(env, corsHeaders) {
 
 async function handleAddWebsite(request, env, corsHeaders) {
   try {
+    // Check authentication
+    if (!isAuthenticated(request)) {
+      return new Response('Unauthorized', { 
+        status: 401, 
+        headers: corsHeaders 
+      });
+    }
+
     const { name, url } = await request.json();
     
     if (!name || !url) {
@@ -280,6 +301,94 @@ async function handleManualCheck(request, env, corsHeaders) {
 
 function generateId() {
   return Math.random().toString(36).substr(2, 9);
+}
+
+// Authentication helpers
+function generateSessionToken() {
+  return Math.random().toString(36).substr(2, 15) + Date.now().toString(36);
+}
+
+function isAuthenticated(request) {
+  const cookies = parseCookies(request.headers.get('Cookie') || '');
+  const sessionToken = cookies.session;
+  
+  // In a real app, you'd validate this token against a database
+  // For this simple implementation, we'll just check if it exists and is recent
+  if (!sessionToken) return false;
+  
+  try {
+    const timestamp = parseInt(sessionToken.split('').slice(-8).join(''), 36);
+    const now = Date.now();
+    // Session expires after 24 hours
+    return (now - timestamp) < 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
+function parseCookies(cookieString) {
+  const cookies = {};
+  cookieString.split(';').forEach(cookie => {
+    const [name, value] = cookie.trim().split('=');
+    if (name && value) {
+      cookies[name] = decodeURIComponent(value);
+    }
+  });
+  return cookies;
+}
+
+async function handleLogin(request, env, corsHeaders) {
+  try {
+    const { password } = await request.json();
+    
+    // Get admin password from environment variable
+    const adminPassword = env.ADMIN_PASSWORD
+
+	if (!adminPassword) {
+		throw new Error('Admin password not set');
+	}
+    
+    if (password !== adminPassword) {
+      return new Response(JSON.stringify({ success: false, message: 'Invalid password' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+    
+    const sessionToken = generateSessionToken();
+    
+    return new Response(JSON.stringify({ success: true }), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Set-Cookie': `session=${sessionToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Path=/`,
+        ...corsHeaders,
+      },
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+    return new Response(JSON.stringify({ success: false, message: 'Login failed' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
+  }
+}
+
+function handleLogout(corsHeaders) {
+  return new Response(JSON.stringify({ success: true }), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': 'session=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/',
+      ...corsHeaders,
+    },
+  });
+}
+
+function handleAuthStatus(request, corsHeaders) {
+  const authenticated = isAuthenticated(request);
+  
+  return new Response(JSON.stringify({ authenticated }), {
+    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  });
 }
 
 async function getHomePage() {
@@ -392,11 +501,18 @@ async function getHomePage() {
         .btn:hover {
             background: #5a6fd8;
         }
-        
-        .btn:disabled {
+          .btn:disabled {
             background: #ccc;
             cursor: not-allowed;
-        }        .website-list {
+        }
+        
+        .btn.logout {
+            background: #ef4444;
+        }
+        
+        .btn.logout:hover {
+            background: #dc2626;
+        }.website-list {
             display: grid;
             gap: 20px;
         }
@@ -564,9 +680,22 @@ async function getHomePage() {
             <h1>🚀 Uptime Checker</h1>
             <p>Monitor your websites with Cloudflare Workers</p>
         </div>
+          <div class="card" id="loginCard" style="display: none;">
+            <h2>Admin Login</h2>
+            <form class="add-website-form" id="loginForm">
+                <div class="form-group">
+                    <label for="adminPassword">Admin Password</label>
+                    <input type="password" id="adminPassword" placeholder="Enter admin password" required>
+                </div>
+                <button type="submit" class="btn" id="loginBtn">Login</button>
+            </form>
+        </div>
         
-        <div class="card">
-            <h2>Add Website</h2>
+        <div class="card" id="addWebsiteCard" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Add Website</h2>
+                <button class="btn" id="logoutBtn" style="background: #ef4444; font-size: 14px; padding: 8px 16px;">Logout</button>
+            </div>
             <form class="add-website-form" id="addWebsiteForm">
                 <div class="form-group">
                     <label for="websiteName">Website Name</label>
@@ -575,24 +704,106 @@ async function getHomePage() {
                 <div class="form-group">
                     <label for="websiteUrl">Website URL</label>
                     <input type="url" id="websiteUrl" placeholder="https://example.com" required>
-                </div>
-                <button type="submit" class="btn" id="addBtn">Add Website</button>
+                </div>                <button type="submit" class="btn" id="addBtn">Add Website</button>
             </form>
-        </div>          <div class="card">
+        </div><div class="card">
             <h2 style="margin-bottom: 20px;">Monitored Websites</h2>
             <div id="websiteList" class="loading">
                 Loading websites...
             </div>
         </div>
-    </div>
-
-    <script>
+    </div>    <script>
         let websites = [];
+        let isAuthenticated = false;
         
         // Load websites on page load
         document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
             loadWebsites();
             setInterval(loadWebsites, 30000); // Refresh every 30 seconds
+        });
+        
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/api/auth-status');
+                const data = await response.json();
+                isAuthenticated = data.authenticated;
+                updateUIBasedOnAuth();
+            } catch (error) {
+                console.error('Error checking auth status:', error);
+                isAuthenticated = false;
+                updateUIBasedOnAuth();
+            }
+        }
+        
+        // Update UI based on authentication status
+        function updateUIBasedOnAuth() {
+            const loginCard = document.getElementById('loginCard');
+            const addWebsiteCard = document.getElementById('addWebsiteCard');
+            
+            if (isAuthenticated) {
+                loginCard.style.display = 'none';
+                addWebsiteCard.style.display = 'block';
+            } else {
+                loginCard.style.display = 'block';
+                addWebsiteCard.style.display = 'none';
+            }
+        }
+        
+        // Login form
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('adminPassword').value;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    isAuthenticated = true;
+                    updateUIBasedOnAuth();
+                    document.getElementById('adminPassword').value = '';
+                } else {
+                    alert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Login failed');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+        
+        // Logout button
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                isAuthenticated = false;
+                updateUIBasedOnAuth();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Logout failed');
+            }
         });
         
         // Add website form
@@ -614,11 +825,14 @@ async function getHomePage() {
                     },
                     body: JSON.stringify({ name, url }),
                 });
-                
-                if (response.ok) {
+                  if (response.ok) {
                     document.getElementById('websiteName').value = '';
                     document.getElementById('websiteUrl').value = '';
                     loadWebsites();
+                } else if (response.status === 401) {
+                    alert('Session expired. Please login again.');
+                    isAuthenticated = false;
+                    updateUIBasedOnAuth();
                 } else {
                     alert('Error adding website');
                 }

@@ -7,10 +7,12 @@ A serverless website uptime monitoring application built with Cloudflare Workers
 - 🚀 **Serverless**: Built on Cloudflare Workers for global edge deployment
 - ⏰ **Automated Monitoring**: Cron jobs check websites every 5 minutes
 - 📊 **Real-time Dashboard**: Beautiful web interface to view uptime status
+- 🔐 **Secure Admin Panel**: Password-protected website management
 - 💾 **Persistent Storage**: Uses Cloudflare KV for storing check results
 - 📈 **Historical Data**: Keeps track of the last 100 checks per website
 - ⚡ **Fast**: Sub-second response times from Cloudflare's global network
 - 📱 **Responsive**: Mobile-friendly interface
+- 🟢🔴 **Visual History**: Color-coded squares showing uptime patterns
 
 ## Quick Start
 
@@ -42,7 +44,13 @@ A serverless website uptime monitoring application built with Cloudflare Workers
 4. **Update wrangler.toml:**
    Replace the `id` and `preview_id` values in `wrangler.toml` with the IDs returned from the previous step.
 
-5. **Deploy to Cloudflare Workers:**
+5. **Set up authentication:**
+   ```bash
+   npm run setup-auth
+   ```
+   This will help you configure a secure admin password for website management.
+
+6. **Deploy to Cloudflare Workers:**
    ```bash
    npm run deploy
    ```
@@ -58,12 +66,26 @@ This will start a local development server where you can test the application.
 
 ## Usage
 
+### Authentication
+
+The application has two access levels:
+
+1. **Public Access**: Anyone can view the uptime dashboard and website status
+2. **Admin Access**: Password-protected access to add/manage websites
+
+To access admin features:
+1. Click the login area on the dashboard
+2. Enter your admin password (set during setup)
+3. You can now add websites and access management features
+4. Use the logout button to end your admin session
+
 ### Web Interface
 
 1. Visit your deployed worker URL (or localhost during development)
-2. Add websites to monitor using the form
-3. View real-time status and uptime statistics
-4. Trigger manual checks with the "Check Now" button
+2. **For viewing**: Browse uptime status, statistics, and history
+3. **For managing**: Login with admin password to add websites
+4. View real-time status with color-coded history squares
+5. Trigger manual checks with the "Check Now" button
 
 ### API Endpoints
 
@@ -73,15 +95,36 @@ GET /api/status
 ```
 Returns the current status and history for all monitored websites.
 
-#### Add Website
+#### Add Website (Admin Only)
 ```http
 POST /api/websites
 Content-Type: application/json
+Cookie: session=your-session-token
 
 {
   "name": "My Website",
   "url": "https://example.com"
 }
+```
+
+#### Login
+```http
+POST /api/login
+Content-Type: application/json
+
+{
+  "password": "your-admin-password"
+}
+```
+
+#### Logout
+```http
+POST /api/logout
+```
+
+#### Check Auth Status
+```http
+GET /api/auth-status
 ```
 
 #### Manual Check
@@ -95,6 +138,28 @@ Content-Type: application/json
 ```
 
 ## Configuration
+
+### Authentication
+
+#### Development Setup
+Create a `.dev.vars` file in your project root (automatically handled by setup script):
+```bash
+ADMIN_PASSWORD=your-password-here
+```
+
+> **Note**: The `.dev.vars` file is automatically added to `.gitignore` to keep your password secure.
+
+#### Production Setup (Recommended)
+Use Cloudflare secrets for better security:
+```bash
+wrangler secret put ADMIN_PASSWORD
+```
+
+#### Security Features
+- **Session-based authentication**: Uses secure HTTP-only cookies
+- **Session expiration**: Sessions expire after 24 hours
+- **Public dashboard**: Monitoring data remains publicly viewable
+- **Protected management**: Only authenticated users can add/remove websites
 
 ### Cron Schedule
 
@@ -180,6 +245,35 @@ npx wrangler deploy --name uptime-checker --route "monitor.yourdomain.com/*"
 ```
 
 ## Troubleshooting
+
+### Authentication Issues
+
+**"Invalid password" error:**
+- Check that `ADMIN_PASSWORD` is set correctly in wrangler.toml or as a secret
+- For development: Verify the password in `[vars]` section  
+- For production: Use `wrangler secret list` to verify the secret exists
+
+**Session expired errors:**
+- Sessions expire after 24 hours for security
+- Simply log in again to get a new session
+- Check browser cookies if issues persist
+
+**Login form not appearing:**
+- Ensure you're accessing the correct URL
+- Check browser console for JavaScript errors
+- Try refreshing the page
+
+### Monitoring Issues
+
+**Websites not being checked:**
+- Verify cron triggers are enabled in your Cloudflare dashboard
+- Check worker logs for errors during scheduled executions
+- Ensure the worker has KV namespace access
+
+**Manual checks failing:**
+- Check if the website URL is accessible
+- Verify the URL format (must include http:// or https://)
+- Review worker logs for timeout or connection errors
 
 ### Common Issues
 
